@@ -116,6 +116,8 @@ class SnapbotGymClass():
 
         r_height = 100 * (p_torso_cur[2] - self.h_base)
         r_forward = 300 * p_torso_cur[0]
+        lane_deviation = p_torso_cur[1] # y-directional displacement
+        r_lane = -np.abs(lane_deviation)*0.5
 
         hip_idx  = [0, 2, 4, 6]
         qpos     = self.env.data.qpos[self.env.ctrl_qpos_idxs][hip_idx]
@@ -134,7 +136,7 @@ class SnapbotGymClass():
         SELF_COLLISION = 1 if len(geom1s) > 0 else 0
         r_collision = -10 if SELF_COLLISION else 0
 
-        r = np.array(r_height + r_survive + r_collision + hip_pen_ang + hip_pen_vel + r_forward)
+        r = np.array(r_height + r_survive + r_collision + hip_pen_ang + hip_pen_vel + r_forward+r_lane)
         
         # Accumulate state history (update 'state_history')
         self.accumulate_state_history()
