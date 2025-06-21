@@ -20,6 +20,7 @@ class SnapbotGymClass():
         self.history_intv_sec  = history_intv_sec
         self.history_intv_tick = int(self.HZ*self.history_intv_sec) # interval between state in history
         self.history_ticks     = np.arange(0,self.n_history,self.history_intv_tick)
+        self.h_base = env.get_p_body('torso')[2]
         
         self.mujoco_nstep      = self.env.HZ // self.HZ # nstep for MuJoCo step
         self.VERBOSE           = VERBOSE
@@ -106,63 +107,33 @@ class SnapbotGymClass():
         return action
         
     def step(self,a,max_time=np.inf):
-        """
-            Step forward
-        """
-        # Increse tick
-        self.tick = self.tick + 1
-        
-        # Previous torso position and yaw angle in degree
-        p_torso_prev       = self.env.get_p_body('torso')
-        R_torso_prev       = self.env.get_R_body('torso')
-        yaw_torso_deg_prev = np.degrees(r2rpy(R_torso_prev)[2])
-        
-        # Run simulation for 'mujoco_nstep' steps
-        self.env.step(ctrl=a,nstep=self.mujoco_nstep)
-        
-        # Current torso position and yaw angle in degree
-        p_torso_curr       = self.env.get_p_body('torso')
-        R_torso_curr       = self.env.get_R_body('torso')
-        yaw_torso_deg_curr = np.degrees(r2rpy(R_torso_curr)[2])
-        
-        # Compute the done signal
-        ROLLOVER = (np.dot(R_torso_curr[:,2],np.array([0,0,1]))<0.0)
+        self.tick += 1
+        p_torso_prev = self.env.get_p_body('torso')
+
+        self.env.step(ctrl=a, nstep=self.mujoco_nstep)
+        p_torso_cur = self.env.get_p_body('torso')
+        R_torso_cur = self.env.get_R_body('torso')
+
+        r_height = 100 * (p_torso_cur[2] - self.h_base)
+
+        hip_idx  = [0, 2, 4, 6]
+        qpos     = self.env.data.qpos[self.env.ctrl_qpos_idxs][hip_idx]
+        qvel     = self.env.data.qvel[self.env.ctrl_qvel_idxs][hip_idx]
+        hip_pen_ang = -0.2 * np.sum(qpos**2)
+        hip_pen_vel = -0.1 * np.sum((qvel/10.0)**2)
+
+        ROLLOVER = (np.dot(R_torso_cur[:,2],np.array([0,0,1]))<0.0)
         if (self.get_sim_time() >= max_time) or ROLLOVER:
             d = True
         else:
             d = False
-        
-        # Compute forward reward
-        x_diff = p_torso_curr[0] - p_torso_prev[0] # x-directional displacement
-        r_forward = x_diff/self.dt
-        
-        # Check self-collision (excluding 'floor')
-        p_contacts,f_contacts,geom1s,geom2s,_,_ = self.env.get_contact_info(must_exclude_prefix='floor')
-        if len(geom1s) > 0: # self-collision occurred
-            SELF_COLLISION = 1
-            r_collision    = -10.0
-        else:
-            SELF_COLLISION = 0
-            r_collision    = 0.0
-            
-        # Survival reward
-        if ROLLOVER:
-            r_survive = -10.0
-        else:
-            r_survive = 0.01
-        
-        # Heading reward
-        heading_vec = R_torso_curr[:,0] # x direction
-        r_heading = 0.01*np.dot(heading_vec,np.array([1,0,0]))
-        if r_heading < 0.0:
-            r_heading = r_heading*100.0 # focus more on penalizing going wrong direction
-            
-        # Lane keeping
-        lane_deviation = p_torso_curr[1] # y-directional displacement
-        r_lane = -np.abs(lane_deviation)*0.5
-        
-        # Compute reward
-        r = np.array(r_forward+r_collision+r_survive+r_heading+r_lane)
+        r_survive = -10.0 if ROLLOVER else 0.01
+
+        _,_,geom1s,_,_,_ = self.env.get_contact_info(must_exclude_prefix='floor')
+        SELF_COLLISION = 1 if len(geom1s) > 0 else 0
+        r_collision = -10 if SELF_COLLISION else 0
+
+        r = np.array(r_height + r_survive + r_collision + hip_pen_ang + hip_pen_vel)
         
         # Accumulate state history (update 'state_history')
         self.accumulate_state_history()
@@ -171,10 +142,7 @@ class SnapbotGymClass():
         o_prime = self.get_observation()
         
         # Other information
-        info = {'yaw_torso_deg_prev':yaw_torso_deg_prev,'yaw_torso_deg_curr':yaw_torso_deg_curr,
-                'x_diff':x_diff,'SELF_COLLISION':SELF_COLLISION,
-                'r_forward':r_forward,'r_collision':r_collision,'r_survive':r_survive,
-                'r_heading':r_heading,'r_lane':r_lane}
+        info = {'h_prev': p_torso_prev[2], 'h_cur': p_torso_cur[2], 'r_height': r_height, 'hip_pen_ang': hip_pen_ang,'hip_pen_vel': hip_pen_vel, 'rollover': ROLLOVER,'self_collision': SELF_COLLISION,'r_survive': r_survive,'reward_step' : r,}
         
         # Return
         return o_prime,r,d,info
