@@ -133,8 +133,8 @@ class SnapbotGymClass():
             d = False
         
         # Compute forward reward
-        x_diff = p_torso_curr[0] - p_torso_prev[0] # x-directional displacement
-        r_forward = x_diff/self.dt
+        y_diff = p_torso_curr[1] - p_torso_prev[1] # x-directional displacement
+        r_forward = y_diff/self.dt
         
         # Check self-collision (excluding 'floor')
         p_contacts,f_contacts,geom1s,geom2s,_,_ = self.env.get_contact_info(must_exclude_prefix='floor')
@@ -172,7 +172,7 @@ class SnapbotGymClass():
         
         # Other information
         info = {'yaw_torso_deg_prev':yaw_torso_deg_prev,'yaw_torso_deg_curr':yaw_torso_deg_curr,
-                'x_diff':x_diff,'SELF_COLLISION':SELF_COLLISION,
+                'y_diff':y_diff,'SELF_COLLISION':SELF_COLLISION,
                 'r_forward':r_forward,'r_collision':r_collision,'r_survive':r_survive,
                 'r_heading':r_heading,'r_lane':r_lane}
         
