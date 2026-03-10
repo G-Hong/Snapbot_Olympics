@@ -1,85 +1,154 @@
-# Introduction to MuJoCo
+# 🤖 Snapbot Olympics: Reinforcement Learning for Robotic Athletics
 
-MuJoCo is a free and open-source physics engine designed to facilitate research and development in robotics, biomechanics, graphics, and animation, providing fast and accurate simulation capabilities.
+**Author:** Gina Hong
 
-* **MuJoCo**: **Mu**lti-**Jo**int dynamics with **Co**ntact
-* Rigid-body simulation
-* Essential simulator components:
+**Date:** June 21, 2025 
 
-  * Solving equations of motion (e.g., articulated body algorithms)
-  * Contact solver (key factor for sim-to-real gaps)
-  * User-friendly visualizer
+This project focuses on training a Snapbot to compete in three distinct Olympic events: **Side Walk**, **High Jump**, and **Long Jump**. By utilizing Deep Reinforcement Learning (RL), the robot learned to navigate complex physical constraints to achieve task-specific locomotive excellence.
 
-## Tutorial Topics
+## 📑 Project Overview
 
-1. Introduction to `MuJoCo` and `mujoco_parser`
-2. Forward Kinematics
-3. Forward Dynamics
-4. Inverse Kinematics
-5. Inverse Dynamics
-6. Reinforcement Learning with `Soft Actor-Critic` for `Snapbot`
-
-## Environment Setup
-
-Follow the steps below to configure your environment
-
-### 1. Create and Activate Conda Environment
-
-Create a new conda environment and activate it:
-
-```bash
-conda create -n snapbot-env python=3.10
-conda activate snapbot-env
-```
-
-### 2. Install Dependencies
-Install all required packages from the provided requirements.txt file:
-
-```bash
-pip install -r requirements.txt
-```
+The core objective was to develop robust policies using simple yet effective reward structures and tuned hyperparameters. The project demonstrates the trade-offs between exploration and stability in high-dimensional action spaces.
 
 ---
 
-## Project: Snapbot Olympics
+## 🏃 Olympic Events & Reward Design
 
-### Overview
+A key finding of this project was that **simple reward structures** often outperformed complex, multi-phase approaches.
 
-Optimize robotic motion using reinforcement learning. Train and evaluate control policies in simulation for various competition tasks.
+### 1. Side Walk (Lateral Locomotion)
 
-### Events
+* **Primary Goal:** Maximize lateral movement along the y-axis.
 
-* **Standing Long Jump:** Forward distance achieved by robot after jumping
-* **High Jump:** Vertical height achieved by robot
-* **Running Sideways:** Time to reach designated goal coordinate (faster is better)
 
-### Simulation
+* **Reward Function:** Speed-based (distance divided by time).
 
-* All tasks conducted in MuJoCo
 
-### Provided Resources
+* **Behavior:** Developed efficient, consistent sideways locomotion patterns.
 
-* Snapbot robot model (`XML`)
-* SAC algorithm implementation (`notebook/06_sac_snapbot_train.ipynb`, `notebook/06_sac_snapbot_eval.ipynb`, `pakage/gym/snapbot_env.py`, `pakage/rl/sac.py`)
-* *(Reward functions must be designed by students)*
 
-### Tasks
 
-* Configure neural network dimensions based on robot DoF and action dimensions
-* Design task-specific reward functions
-* Train and evaluate policies
-* Analyze reward function impact on performance
+### 2. High Jump (Vertical Elevation)
 
-### Submission
+* **Primary Goal:** Maximize the maximum vertical height achieved.
 
-* One-page A4 result report (must include reward definitions and model hyperparameters)
-* Video of trained Snapbot performance
 
-Aim to design the best policy and win the Snapbot Olympics!
+* **Reward Formula:** 
+$$r_{height} = 100 \times (p\_torso\_cur[2] - h\_base)$$
+
+
+.
+
+
+* **Mechanics:** Encouraged proper jumping posture and knee extension.
+
+
+* **Penalty:** Hip motor noise reduction to stabilize the torso.
+
+
+
+### 3. Long Jump (Forward Projection)
+
+* **Primary Goal:** Maximize forward distance while maintaining stability.
+
+
+* **Reward Formula:** Combined $r_{height}$ with a heavily weighted forward component ($300 \times p\_torso\_cur[0]$).
+
+
+* **Stability:** Utilized a lateral stability penalty ($r_{lane}$) to prevent deviation from the track.
+
+
 
 ---
 
-### Contact
+## ⚙️ Training Settings & Hyperparameters
 
-* **Prof. Sungjoon Choi:** [sungjoon dash choi at korea dot ac dot kr](mailto:sungjoon-choi@korea.ac.kr)
-* **TA Taemoon Jeong:** [taemoon dash jeong at korea dot ac dot kr](mailto:taemoon-jeong@korea.ac.kr)
+The training was conducted over **1000 episodes** per task with a maximum episode length of **5.0 seconds**.
+
+| Hyperparameter | Side Walk | High Jump | Long Jump |
+| --- | --- | --- | --- |
+| **Warmup Episodes** | 10 
+
+ | 40 
+
+ | 40 
+
+ |
+| **Learning Rate (Actor)** | 0.0005 
+
+ | 0.0001 
+
+ | 0.0001 
+
+ |
+| **Learning Rate (Critic)** | 0.0001 
+
+ | 0.0003 
+
+ | 0.0003 
+
+ |
+| **Alpha (Entropy)** | 0.1 
+
+ | 1.0 (Increased) 
+
+ | 1.0 
+
+ |
+| **Batch Size** | 256 
+
+ | 256 
+
+ | 256 
+
+ |
+
+> 
+> **Note:** Alpha values were increased for jumping tasks to encourage better exploration of the vertical action space.
+> 
+> 
+
+---
+
+## 📊 Results & Analysis
+
+### Quantitative Performance
+
+| Task | Performance Metric | Result |
+| --- | --- | --- |
+| **Side Walk** | Lateral efficiency | Consistent sideways motion 
+
+ |
+| **High Jump** | Max vertical height | Successful upward jumping 
+
+ |
+| **Long Jump** | Forward distance | Coordinated lift & projection 
+
+ |
+
+### Key Technical Insights
+
+* **Heavy Weighting:** Applying a 300x weight to the primary objective in Long Jump was crucial for success.
+
+
+* **Stability Trade-offs:** There is a significant conflict between initial exploration and training stability. Attempts to force stability often reduced overall task performance.
+
+
+* **Simplicity Wins:** Complex reward designs do not guarantee better outcomes; well-tuned simple functions proved more reliable.
+
+
+
+---
+
+## 🚀 Future Work
+
+To further improve performance and resolve the exploration-stability trade-off, future iterations will explore:
+
+* **Advanced Exploration Strategies**.
+
+
+* **Curriculum Learning** to gradually increase task difficulty.
+
+
+* 
+**Robust Training Algorithms** to minimize learning instability.
