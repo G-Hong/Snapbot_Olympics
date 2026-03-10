@@ -150,5 +150,4 @@ To further improve performance and resolve the exploration-stability trade-off, 
 * **Curriculum Learning** to gradually increase task difficulty.
 
 
-* 
-**Robust Training Algorithms** to minimize learning instability.
+* **Robust Training Algorithms** to minimize learning instability.
